@@ -141,7 +141,7 @@ POLLINATIONS_MIN_INTERVAL = 16  # seconds; anonymous tier is ~1 request/15s
 _last_pollinations_call = [0.0]
 
 
-def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retries=6):
+def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retries=1):
     """
     Real AI-generated art with no API key required. Uses Pollinations.ai's
     open image endpoint (https://image.pollinations.ai/prompt/...), which
@@ -207,50 +207,50 @@ def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retrie
 # --------------------------------------------------------------------------- #
 # Backend: OpenAI
 # --------------------------------------------------------------------------- #
-def draw_openai(prompt_text, out_path, style_suffix):
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY not set")
-    from openai import OpenAI
+# def draw_openai(prompt_text, out_path, style_suffix):
+#     api_key = os.environ.get("OPENAI_API_KEY")
+#     if not api_key:
+#        raise RuntimeError("OPENAI_API_KEY not set")
+#    from openai import OpenAI
 
-    client = OpenAI(api_key=api_key)
-    resp = client.images.generate(
-        model="gpt-image-1",
-        prompt=f"{prompt_text} {style_suffix}",
-        size="1024x1024",
-    )
-    image_b64 = resp.data[0].b64_json
-    ensure_dirs(os.path.dirname(out_path))
-    with open(out_path, "wb") as f:
-        f.write(base64.b64decode(image_b64))
-    return out_path
+#    client = OpenAI(api_key=api_key)
+#    resp = client.images.generate(
+#        model="gpt-image-1",
+#        prompt=f"{prompt_text} {style_suffix}",
+#        size="1024x1024",
+#    )
+#    image_b64 = resp.data[0].b64_json
+#    ensure_dirs(os.path.dirname(out_path))
+#    with open(out_path, "wb") as f:
+#        f.write(base64.b64decode(image_b64))
+#    return out_path
 
 
 # --------------------------------------------------------------------------- #
 # Backend: Google (Gemini / Imagen)
 # --------------------------------------------------------------------------- #
-def draw_google(prompt_text, out_path, style_suffix):
-    api_key = os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        raise RuntimeError("GOOGLE_API_KEY not set")
-    from google import genai
+# def draw_google(prompt_text, out_path, style_suffix):
+#    api_key = os.environ.get("GOOGLE_API_KEY")
+#    if not api_key:
+#        raise RuntimeError("GOOGLE_API_KEY not set")
+#    from google import genai
 
-    client = genai.Client(api_key=api_key)
-    resp = client.models.generate_content(
-        model="gemini-2.5-flash-image",
-        contents=f"{prompt_text} {style_suffix}",
-    )
-    image_bytes = None
-    for part in resp.candidates[0].content.parts:
-        if getattr(part, "inline_data", None) is not None:
-            image_bytes = part.inline_data.data
-            break
-    if image_bytes is None:
-        raise RuntimeError("google backend returned no image data")
-    ensure_dirs(os.path.dirname(out_path))
-    with open(out_path, "wb") as f:
-        f.write(image_bytes)
-    return out_path
+#    client = genai.Client(api_key=api_key)
+#    resp = client.models.generate_content(
+#        model="gemini-2.5-flash-image",
+#        contents=f"{prompt_text} {style_suffix}",
+#    )
+#    image_bytes = None
+#    for part in resp.candidates[0].content.parts:
+#        if getattr(part, "inline_data", None) is not None:
+#            image_bytes = part.inline_data.data
+#            break
+#    if image_bytes is None:
+#        raise RuntimeError("google backend returned no image data")
+#    ensure_dirs(os.path.dirname(out_path))
+#    with open(out_path, "wb") as f:
+#        f.write(image_bytes)
+#    return out_path
 
 
 # --------------------------------------------------------------------------- #
