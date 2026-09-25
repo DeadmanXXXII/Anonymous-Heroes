@@ -141,7 +141,7 @@ POLLINATIONS_MIN_INTERVAL = 16  # seconds; anonymous tier is ~1 request/15s
 _last_pollinations_call = [0.0]
 
 
-def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retries=3):
+def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retries=4):
     """
     Real AI-generated art with no API key required. Uses Pollinations.ai's
     open image endpoint (https://image.pollinations.ai/prompt/...), which
@@ -171,6 +171,7 @@ def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retrie
         time.sleep(POLLINATIONS_MIN_INTERVAL - elapsed)
 
     last_err = None
+    RETRYABLE = {429, 500, 502, 503, 504}
     for attempt in range(max_retries):
         try:
             req = urllib.request.Request(url, headers=headers)
@@ -183,13 +184,23 @@ def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retrie
             return out_path
         except urllib.error.HTTPError as e:
             last_err = e
-            if e.code == 429:
-                time.sleep(POLLINATIONS_MIN_INTERVAL * (attempt + 1))
+            if e.code in RETRYABLE and attempt < max_retries - 1:
+                # 429 = rate limit, needs the full window; 5xx = transient
+                # server error, a short backoff is enough.
+                wait = POLLINATIONS_MIN_INTERVAL * (attempt + 1) if e.code == 429 else 5 * (attempt + 1)
+                print(f"    [pollinations] HTTP {e.code}, retrying in {wait}s "
+                      f"(attempt {attempt + 1}/{max_retries})...", flush=True)
+                time.sleep(wait)
                 continue
+            if e.code in RETRYABLE:
+                raise RuntimeError(f"pollinations backend HTTP {e.code} after {max_retries} attempts: {e.reason}")
             raise RuntimeError(f"pollinations backend HTTP {e.code}: {e.reason}")
         except urllib.error.URLError as e:
             last_err = e
-            time.sleep(3 * (attempt + 1))
+            if attempt < max_retries - 1:
+                print(f"    [pollinations] connection error, retrying in {3 * (attempt + 1)}s "
+                      f"(attempt {attempt + 1}/{max_retries})...", flush=True)
+                time.sleep(3 * (attempt + 1))
     raise RuntimeError(f"pollinations backend failed after {max_retries} attempts: {last_err}")
 
 
