@@ -141,7 +141,7 @@ POLLINATIONS_MIN_INTERVAL = 16  # seconds; anonymous tier is ~1 request/15s
 _last_pollinations_call = [0.0]
 
 
-def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retries=2):
+def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retries=6):
     """
     Real AI-generated art with no API key required. Uses Pollinations.ai's
     open image endpoint (https://image.pollinations.ai/prompt/...), which
@@ -236,12 +236,17 @@ def draw_google(prompt_text, out_path, style_suffix):
     from google import genai
 
     client = genai.Client(api_key=api_key)
-    resp = client.models.generate_images(
-        model="imagen-4.0-generate-001",
-        prompt=f"{prompt_text} {style_suffix}",
-        config={"number_of_images": 1},
+    resp = client.models.generate_content(
+        model="gemini-2.5-flash-image",
+        contents=f"{prompt_text} {style_suffix}",
     )
-    image_bytes = resp.generated_images[0].image.image_bytes
+    image_bytes = None
+    for part in resp.candidates[0].content.parts:
+        if getattr(part, "inline_data", None) is not None:
+            image_bytes = part.inline_data.data
+            break
+    if image_bytes is None:
+        raise RuntimeError("google backend returned no image data")
     ensure_dirs(os.path.dirname(out_path))
     with open(out_path, "wb") as f:
         f.write(image_bytes)
