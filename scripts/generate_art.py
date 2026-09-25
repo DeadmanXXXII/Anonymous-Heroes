@@ -271,12 +271,10 @@ def generate_panel(backend, prompt_text, out_path, palette, seed_text, style_suf
     if backend == "google":
         return draw_google(prompt_text, out_path, style_suffix)
     if backend == "auto":
-        for b in ("openai", "google", "pollinations"):
+        for b in ("openai", "pollinations"):
             try:
                 if b == "openai":
                     return draw_openai(prompt_text, out_path, style_suffix)
-                if b == "google":
-                    return draw_google(prompt_text, out_path, style_suffix)
                 return draw_pollinations(prompt_text, out_path, style_suffix, seed_text)
             except Exception as e:  # noqa: BLE001
                 print(f"  [auto] {b} backend unavailable ({e}); trying next...", flush=True)
