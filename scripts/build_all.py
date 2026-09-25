@@ -14,7 +14,7 @@ HERE = sys.path[0] or "."
 
 
 def run(cmd):
-    print(f"\n$ {' '.join(cmd)}")
+    print(f"\n$ {' '.join(cmd)}", flush=True)
     subprocess.run(cmd, check=True)
 
 
@@ -26,18 +26,22 @@ def main():
     parser.add_argument("--issue", type=int, default=None)
     args = parser.parse_args()
 
-    art_cmd = [sys.executable, f"{HERE}/generate_art.py", "--backend", args.backend]
-    pages_cmd = [sys.executable, f"{HERE}/build_pages.py"]
+    # -u: unbuffered stdout on every nested script, so progress prints show
+    # up live in the log instead of sitting in a buffer until it fills or
+    # the process exits (which, on a slow backend like pollinations, can
+    # look like a hang for minutes at a time even though it's working).
+    art_cmd = [sys.executable, "-u", f"{HERE}/generate_art.py", "--backend", args.backend]
+    pages_cmd = [sys.executable, "-u", f"{HERE}/build_pages.py"]
     if args.issue:
         art_cmd += ["--issue", str(args.issue)]
         pages_cmd += ["--issue", str(args.issue)]
 
     run(art_cmd)
     run(pages_cmd)
-    run([sys.executable, f"{HERE}/render_html.py"])
-    run([sys.executable, f"{HERE}/render_pdf.py"])
+    run([sys.executable, "-u", f"{HERE}/render_html.py"])
+    run([sys.executable, "-u", f"{HERE}/render_pdf.py"])
 
-    print("\nBuild complete. See output/html/ and output/pdf/.")
+    print("\nBuild complete. See output/html/ and output/pdf/.", flush=True)
 
 
 if __name__ == "__main__":

@@ -263,7 +263,7 @@ def generate_panel(backend, prompt_text, out_path, palette, seed_text, style_suf
                     return draw_google(prompt_text, out_path, style_suffix)
                 return draw_pollinations(prompt_text, out_path, style_suffix, seed_text)
             except Exception as e:  # noqa: BLE001
-                print(f"  [auto] {b} backend unavailable ({e}); trying next...")
+                print(f"  [auto] {b} backend unavailable ({e}); trying next...", flush=True)
         return draw_procedural(prompt_text, out_path, palette, seed_text)
     raise ValueError(f"Unknown backend: {backend}")
 
@@ -286,6 +286,20 @@ def main():
     ensure_dirs(GENERATED_ART_DIR)
 
     total, made = 0, 0
+    panel_count = sum(
+        len(page["panels"])
+        for issue in issues
+        for page in issue["pages"]
+        if not args.issue or issue["number"] == args.issue
+    )
+    if args.backend in ("pollinations", "auto"):
+        est_minutes = round(panel_count * POLLINATIONS_MIN_INTERVAL / 60, 1)
+        print(f"Backend '{args.backend}': up to {panel_count} panels. If falling back to the "
+              f"free Pollinations tier, that's rate-limited to ~1 panel/{POLLINATIONS_MIN_INTERVAL}s "
+              f"— roughly {est_minutes} min worst case. Progress prints below as each panel finishes; "
+              f"no output for ~{POLLINATIONS_MIN_INTERVAL}s between panels is normal, not a hang.",
+              flush=True)
+
     for issue in issues:
         if args.issue and issue["number"] != args.issue:
             continue
@@ -298,11 +312,13 @@ def main():
                     continue
                 prompt_text = panel.get("image_prompt") or panel["description"]
                 seed_text = f"{issue['slug']}-{page['page']}-{panel['id']}-{prompt_text}"
-                print(f"Generating {fname} via {args.backend}...")
+                print(f"[{made + 1}] Generating {fname} via {args.backend}...", flush=True)
                 generate_panel(args.backend, prompt_text, out_path, palette, seed_text, style_suffix)
                 made += 1
+                print("    done.", flush=True)
 
-    print(f"\nDone. {made}/{total} panels generated (others already existed; use --force to redo).")
+    print(f"\nDone. {made}/{total} panels generated (others already existed; use --force to redo).",
+          flush=True)
 
 
 if __name__ == "__main__":
