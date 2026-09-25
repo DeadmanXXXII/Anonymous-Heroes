@@ -141,7 +141,7 @@ POLLINATIONS_MIN_INTERVAL = 16  # seconds; anonymous tier is ~1 request/15s
 _last_pollinations_call = [0.0]
 
 
-def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retries=4):
+def draw_pollinations(prompt_text, out_path, style_suffix, seed_text, max_retries=2):
     """
     Real AI-generated art with no API key required. Uses Pollinations.ai's
     open image endpoint (https://image.pollinations.ai/prompt/...), which
