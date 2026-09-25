@@ -1,0 +1,117 @@
+name: Build & Release Comic
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend:
+        description: "Art backend"
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - procedural
+          - pollinations
+          - openai
+          - google
+          - auto
+      issue:
+        description: "Only build this issue number (leave blank for all 16)"
+        required: false
+        type: string
+      deploy_pages:
+        description: "Deploy the HTML site to GitHub Pages"
+        required: true
+        default: true
+        type: boolean
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Export issue YAML from source
+        run: python scripts/export_issue_yaml.py
+
+      - name: Build pipeline
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
+        run: |
+          BACKEND="${{ github.event.inputs.backend || 'auto' }}"
+          ISSUE="${{ github.event.inputs.issue }}"
+          if [ -n "$ISSUE" ]; then
+            python scripts/build_all.py --backend "$BACKEND" --issue "$ISSUE"
+          else
+            python scripts/build_all.py --backend "$BACKEND"
+          fi
+
+      - name: Zip HTML site (for release attachment)
+        run: |
+          cd output/html
+          zip -r ../../anonymous-heroes-html-site.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anonymous-heroes-build
+          path: |
+            anonymous-heroes-html-site.zip
+            output/pdf/*.pdf
+
+      # Packages output/html/ as the special "github-pages" artifact that
+      # the deploy job below picks up. Independent of the zip above.
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: output/html
+
+  deploy-pages:
+    needs: build
+    if: ${{ github.event.inputs.deploy_pages != 'false' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: anonymous-heroes-build
+
+      - name: Attach to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            anonymous-heroes-html-site.zip
+            output/pdf/*.pdf

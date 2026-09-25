@@ -1,0 +1,26 @@
+# Series-wide config read by the build pipeline (common.py -> load_bible()).
+# This file was not part of the files you handed me, so these are reasonable
+# defaults pulled from the tone already baked into issues_data.py's
+# image_prompt fields ("Acubi aesthetic ... muted earth-tone palette with
+# cyan accent lighting"). Edit freely — nothing else in the pipeline hard-codes
+# these values, they all flow from here.
+
+title: "Anonymous Heroes"
+genre: "Cyberpunk superhero"
+aesthetic: "Acubi minimalist — muted earth tones, clean geometric silhouettes, sparing neon accent color"
+
+palette:
+  background: "#e7e0d3"
+  ink: "#20201d"
+  shadow: "#5a5548"
+  accent_cyan: "#3ad6c9"
+  accent_magenta: "#c9427a"
+  accent_amber: "#d69a3a"
+
+# Carried over from README-1.md so it isn't lost.
+open_items:
+  - "Shadow's final identity/design (Issue 13)"
+  - "MSmaster's ultimate fate (affects Issue 16 ending)"
+  - "Whether Chuck folds into Zero's role"
+  - "Hadess Banshees individual names/designs"
+  - "Alex Olsen's hero name"
